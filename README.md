@@ -42,7 +42,8 @@ Contributions adding more devices are very welcome.
 - **Login / logout** flow — works with any VeSync account
 - **Token-based session** — your password is never stored; log in once, auto-connect after
 - **Syncing indicator** — confirms each command actually took effect on the device
-- Two frontends over one backend: **Flet** (desktop + web) and **tkinter** (native desktop)
+- Multiple frontends over one backend: **Flet** (desktop + web), **tkinter** (native desktop), and a **macOS menu bar** app
+- **Device picker** — works with accounts that have more than one fan
 - **Fake backend** for hardware-free development and demos
 
 ---
@@ -61,6 +62,7 @@ fanctl                      # Flet desktop app (prompts login on first run)
 fanctl --web                # open in the browser
 fanctl --fake               # in-memory fake fan — no hardware/internet
 fanctl --tk                 # alternative tkinter frontend  (needs: pip install -e ".[tk]")
+fanctl --menubar            # macOS menu bar app           (needs: pip install -e ".[menubar]")
 ```
 
 `python3 -m fanctl ...` is equivalent. Flags combine, e.g. `fanctl --fake --web`.
@@ -153,7 +155,8 @@ fanctl/
 │   └── paths.py        cross-platform token location
 ├── ui/             frontends
 │   ├── flet_app.py     primary: desktop + web
-│   └── tk_app.py       alternative: native tkinter
+│   ├── tk_app.py       alternative: native tkinter
+│   └── menubar_app.py  alternative: macOS menu bar (rumps)
 └── __main__.py     wires a frontend to a backend
 tests/              pytest against the fake backend
 ```
@@ -198,6 +201,7 @@ CustomTkinter's assets (PyInstaller hooks / `--add-data`).
 | flet | ≥ 0.85 | primary frontend |
 | platformdirs | ≥ 4 | cross-platform token storage |
 | customtkinter | ≥ 5 | only for `--tk` (`pip install -e ".[tk]"`) |
+| rumps | ≥ 0.4 | only for `--menubar`, macOS (`pip install -e ".[menubar]"`) |
 
 > **tkinter / Tcl-Tk:** pyenv often builds Python without tkinter. If `import
 > tkinter` fails and you want the `--tk` frontend:

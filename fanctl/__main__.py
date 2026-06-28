@@ -3,6 +3,7 @@
     fanctl              # Flet desktop app (real fan)
     fanctl --web        # Flet app in the browser
     fanctl --tk         # alternative CustomTkinter desktop app
+    fanctl --menubar    # macOS menu bar app (needs: pip install "fanctl[menubar]")
     fanctl --fake       # in-memory fake fan (no hardware) — combine with the above
 
 Frontend and backend are chosen here and wired together; everything else is
@@ -30,7 +31,15 @@ def main(argv: list[str] | None = None) -> None:
 
     controller = _make_controller(fake="--fake" in args)
 
-    if "--tk" in args:
+    if "--menubar" in args:
+        if sys.platform != "darwin":
+            sys.exit("--menubar is macOS-only.")
+        try:
+            from .ui.menubar_app import run
+        except ImportError:
+            sys.exit('Menu bar support needs rumps. Install with: pip install "fanctl[menubar]"')
+        run(controller)
+    elif "--tk" in args:
         from .ui.tk_app import run
         run(controller)
     else:
