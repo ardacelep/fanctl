@@ -7,7 +7,7 @@ to a small controller contract and renders immutable snapshots.
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  fanctl/ui/   frontends (Flet, tkinter, …)            │
+│  fanctl/ui/   frontends (Flet, tkinter, menu bar, …)  │
 │  - render FanState snapshots                          │
 │  - call controller methods on user input             │
 └───────────────┬──────────────────────────────────────┘
