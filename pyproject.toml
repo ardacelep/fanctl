@@ -9,7 +9,7 @@ description = "Control Levoit (VeSync) tower fans from the desktop, web, or CLI.
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "Arda Çelep" }]
+authors = [{ name = "Arda Celep" }]
 keywords = ["vesync", "levoit", "fan", "smart-home", "flet"]
 classifiers = [
     "Programming Language :: Python :: 3",

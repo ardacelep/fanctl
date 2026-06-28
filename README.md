@@ -85,9 +85,13 @@ in-app login screen handles credentials — no config files.
 | Refresh | Pull fresh state from the cloud |
 | Logout | Clears the saved token, returns to login |
 
-After each command the header shows **"Güncelleniyor…"** with a progress bar until
-the cloud confirms the new state (e.g. Turbo makes the fan pick its own speed,
-which appears within ~1.5 s).
+After each command the header shows **"Updating…"** with a progress bar until the
+cloud confirms the new state (e.g. Turbo makes the fan pick its own speed, which
+appears within ~1.5 s).
+
+Changes made elsewhere — the VeSync mobile app or the physical fan — are picked up
+automatically too: the app polls the cloud every ~10 s (VeSync has no push API),
+so external changes appear within a few seconds without needing a manual refresh.
 
 ---
 

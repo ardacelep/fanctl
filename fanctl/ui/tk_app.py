@@ -335,14 +335,19 @@ class App:
             self.progress.pack_forget()
             self._set_status("Connected", GREEN)
 
+    # Poll the cloud so changes made elsewhere (VeSync app, the physical fan) show
+    # up here. VeSync has no push API, so this is a poll.
+    POLL_INTERVAL_MS = 10_000
+
     def _schedule_auto_refresh(self):
         def _tick():
             if self._screen != "fan":
                 return                                  # stop loop after logout/close
-            if time.monotonic() - self._last_action >= 20:
+            # Skip while a command/reconcile is running or just finished.
+            if self._busy == 0 and time.monotonic() - self._last_action >= 5:
                 self._submit(self._ctrl.refresh())      # silent background refresh
-            self.root.after(30_000, _tick)
-        self.root.after(30_000, _tick)
+            self.root.after(self.POLL_INTERVAL_MS, _tick)
+        self.root.after(self.POLL_INTERVAL_MS, _tick)
 
     # ── Controls ──────────────────────────────────────────────────────────
 

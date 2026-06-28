@@ -6,9 +6,15 @@ directly on Flet's event loop and ``on_change`` updates the UI in place.
 
 from __future__ import annotations
 
+import asyncio
+
 import flet as ft
 
 from ..backend import DEFAULT_REGION, REGIONS, FanController, FanState
+
+# How often to poll the cloud so changes made elsewhere (VeSync app, the physical
+# fan) show up here. VeSync has no push API, so this is a poll.
+POLL_INTERVAL = 10  # seconds
 
 # ── Palette ──────────────────────────────────────────────────────────────────
 BG     = "#1b1d24"
@@ -226,6 +232,21 @@ class FletApp:
         )
         self._render(self.ctrl.state)
         self.page.update()      # push the initial state to the client
+
+        # Start (or restart) the background poll for externally-made changes.
+        self._poll_token = getattr(self, "_poll_token", 0) + 1
+        self.page.run_task(self._poll_loop, self._poll_token)
+
+    async def _poll_loop(self, token: int):
+        while self.screen == "fan" and self._poll_token == token:
+            await asyncio.sleep(POLL_INTERVAL)
+            if self.screen != "fan" or self._poll_token != token:
+                break
+            if self.busy == 0:          # don't poll while a command/reconcile runs
+                try:
+                    await self.ctrl.refresh()
+                except Exception:
+                    pass
 
     # ── State → UI ────────────────────────────────────────────────────────────
 
