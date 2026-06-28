@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fanctl"
-version = "0.2.0"
+version = "0.2.1"
 description = "Control Levoit (VeSync) tower fans from the desktop, web, or CLI."
 readme = "README.md"
 requires-python = ">=3.10"
