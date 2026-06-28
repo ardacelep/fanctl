@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fanctl"
+version = "0.1.0"
+description = "Control Levoit (VeSync) tower fans from the desktop, web, or CLI."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Arda Çelep" }]
+keywords = ["vesync", "levoit", "fan", "smart-home", "flet"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Environment :: X11 Applications",
+    "Topic :: Home Automation",
+]
+
+# Flet is the primary frontend, so it ships by default. The tkinter frontend is
+# optional (customtkinter) and imported lazily only when `--tk` is used.
+dependencies = [
+    "pyvesync>=3.4",
+    "platformdirs>=4",
+    "flet>=0.85",
+]
+
+[project.optional-dependencies]
+tk = ["customtkinter>=5"]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.5"]
+
+[project.scripts]
+fanctl = "fanctl.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/ardacelep/fanctl"
+Issues = "https://github.com/ardacelep/fanctl/issues"
+
+[tool.setuptools.packages.find]
+include = ["fanctl*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100

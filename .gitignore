@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Virtual envs
+venv/
+.venv/
+env/
+
+# Flet build output
+build/
+*.app
+*.dmg
+*.msi
+*.apk
+
+# Credentials / local data (NEVER commit)
+auth.json
+config.json
+*.vesync_auth
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Test / tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
