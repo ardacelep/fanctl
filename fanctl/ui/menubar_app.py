@@ -17,29 +17,34 @@ import asyncio
 import subprocess
 import sys
 import threading
+from pathlib import Path
 
 import rumps
 
 from ..backend import DEFAULT_REGION, MODES, FanController, FanState  # noqa: F401
 
 MODE_LABELS = {"normal": "Normal", "turbo": "Turbo", "auto": "Auto", "sleep": "Sleep"}
+ICON = str(Path(__file__).parent / "assets" / "menubar_icon.png")
 
 
 class MenuBarApp(rumps.App):
     def __init__(self, controller: FanController):
-        super().__init__("fanctl", title="🌀", quit_button="Quit")
+        # template=True lets macOS recolor the icon for light/dark menu bars.
+        super().__init__("fanctl", title=None, icon=ICON, template=True, quit_button="Quit")
         self.ctrl = controller
 
         self.loop = asyncio.new_event_loop()
         threading.Thread(target=self.loop.run_forever, daemon=True).start()
 
         self._authed = False
+        self._restoring = False
         self._devices = []          # list[DeviceInfo]
         self._devices_built = False
         self._busy = 0
 
         # ── Build the (static) menu; the Timer fills in live values ──────────
         self.m_status = rumps.MenuItem("Connecting…")
+        self.m_temp = rumps.MenuItem("Temperature: –")
         self.m_power = rumps.MenuItem("Power", callback=self._on_power)
         self.m_speed = [rumps.MenuItem(str(n), callback=self._on_speed) for n in range(1, 13)]
         self.m_mode = {k: rumps.MenuItem(v, callback=self._on_mode) for k, v in MODE_LABELS.items()}
@@ -52,6 +57,7 @@ class MenuBarApp(rumps.App):
 
         self.menu = [
             self.m_status,
+            self.m_temp,
             None,
             self.m_power,
             {"Speed": self.m_speed},
@@ -93,6 +99,17 @@ class MenuBarApp(rumps.App):
         if self._authed:
             await self._load_devices()
 
+    async def _retry_restore(self):
+        """Poll for a session created in the windowed app, then connect."""
+        try:
+            if await self.ctrl.restore():
+                self._authed = True
+                await self._load_devices()
+        except Exception:
+            pass
+        finally:
+            self._restoring = False
+
     async def _load_devices(self):
         try:
             self._devices = await self.ctrl.list_devices()
@@ -111,10 +128,14 @@ class MenuBarApp(rumps.App):
 
     def _sync(self, _timer):
         if not self._authed:
-            self.title = "🌀"
             self.m_status.title = "Not signed in"
+            self.m_temp.title = "Sign in to control your fan"
             self.m_signin.set_callback(self._open_app)
             self.m_signout.set_callback(None)
+            # Auto-detect a sign-in done in the windowed app (token appears).
+            if not self._restoring:
+                self._restoring = True
+                self._submit(self._retry_restore())
             return
 
         self.m_signin.set_callback(None)            # already signed in
@@ -122,8 +143,9 @@ class MenuBarApp(rumps.App):
         self._build_devices_menu()
 
         st: FanState = self.ctrl.state
-        self.title = f"{round(st.temperature_c)}°" if st.temperature_c is not None else "🌀"
         self.m_status.title = ("Updating…" if self._busy else "Connected")
+        self.m_temp.title = (f"Temperature: {st.temperature_c:.1f}°C"
+                             if st.temperature_c is not None else "Temperature: –")
         self.m_power.title = "Power: On" if st.on else "Power: Off"
         self.m_power.state = 1 if st.on else 0
         for n, item in enumerate(self.m_speed, start=1):
