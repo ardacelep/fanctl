@@ -41,6 +41,9 @@ Issues = "https://github.com/ardacelep/fanctl/issues"
 [tool.setuptools.packages.find]
 include = ["fanctl*"]
 
+[tool.setuptools.package-data]
+"fanctl.ui" = ["assets/*.png"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 
