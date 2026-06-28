@@ -79,16 +79,27 @@ No Python needed — grab a prebuilt bundle from the
 Unzip and launch. The in-app login screen handles credentials — no config files.
 
 > **First launch — the app is unsigned**, so the OS shows a one-time warning.
-> This is expected for a free, independent project (code signing costs a yearly
-> fee). To open it:
+> This is expected for a free, independent project (Apple/Microsoft code signing
+> costs a yearly fee). It's a one-time step per download.
 >
-> - **macOS:** right-click the app → **Open** → **Open** in the dialog. (Double-
->   clicking shows *"can't be opened because it is from an unidentified developer"* —
->   right-click → Open is the bypass. You only do this once.) On recent macOS you
->   may instead need **System Settings → Privacy & Security → Open Anyway**.
-> - **Windows:** SmartScreen shows *"Windows protected your PC"* → click
->   **More info** → **Run anyway**.
-> - **Linux:** make it executable if needed (`chmod +x`) and run it.
+> **macOS** (the dialog says *"Apple could not verify … is free of malware"*):
+> click **Done** (not *Move to Trash*), then either —
+> - **Terminal (most reliable):** remove the download quarantine flag, then double-click:
+>   ```bash
+>   xattr -dr com.apple.quarantine /path/to/fanctl.app
+>   ```
+>   Tip: type `xattr -dr com.apple.quarantine ` (with a trailing space) and drag the
+>   app onto the Terminal window to fill in the path. A harmless "No such file"
+>   note about a symlink may appear — it still works.
+> - **or System Settings:** try to open it once, then go to **System Settings →
+>   Privacy & Security**, scroll down to *"fanctl was blocked…"* → **Open Anyway**.
+>
+> *(On macOS 15 Sequoia the old "right-click → Open" trick no longer bypasses this;
+> use one of the two methods above.)*
+>
+> **Windows:** SmartScreen shows *"Windows protected your PC"* → **More info** → **Run anyway**.
+>
+> **Linux:** make it executable if needed (`chmod +x`) and run it.
 
 ---
 
