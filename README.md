@@ -94,8 +94,8 @@ Unzip and launch. The in-app login screen handles credentials — no config file
 > - **or System Settings:** try to open it once, then go to **System Settings →
 >   Privacy & Security**, scroll down to *"fanctl was blocked…"* → **Open Anyway**.
 >
-> *(On macOS 15 Sequoia the old "right-click → Open" trick no longer bypasses this;
-> use one of the two methods above.)*
+> *(On recent macOS — Sequoia 15, Tahoe 26, and later — the old "right-click →
+> Open" trick no longer bypasses this; use one of the two methods above.)*
 >
 > **Windows:** SmartScreen shows *"Windows protected your PC"* → **More info** → **Run anyway**.
 >
