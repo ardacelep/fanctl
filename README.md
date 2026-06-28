@@ -14,7 +14,7 @@ UI-agnostic backend, secure token login, and a modern UI.
 > respective owners; used here only to describe compatibility.
 
 <p align="center">
-  <img src="assets/screenshot.png" alt="fanctl fan screen" width="360">
+  <img src="assets/demo.gif" alt="fanctl controlling a Levoit tower fan" width="360">
 </p>
 
 ---
