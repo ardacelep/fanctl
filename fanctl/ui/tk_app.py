@@ -36,7 +36,6 @@ class App:
         self._ctrl = controller
         self._state = FanState()
         self._screen = "loading"
-        self._show_back = False      # show "← Devices" only when there's a picker
 
         ctk.set_appearance_mode("dark")
         self.root = ctk.CTk()
@@ -94,21 +93,22 @@ class App:
 
     # ── Device routing ──────────────────────────────────────────────────────
 
-    def _go_devices(self):
+    def _go_devices(self, auto: bool = True):
+        """auto=True selects a lone device automatically (launch); auto=False always
+        shows the list (the "← Devices" button), reachable even with one device."""
         self._show_loading("Loading devices…")
         fut = self._submit(self._ctrl.list_devices())
-        fut.add_done_callback(lambda f: self._ui(lambda: self._devices_loaded(f)))
+        fut.add_done_callback(lambda f: self._ui(lambda: self._devices_loaded(f, auto)))
 
-    def _devices_loaded(self, f):
+    def _devices_loaded(self, f, auto: bool):
         if f.exception():
             self._show_login()
             return
         devices = f.result()
         supported = [d for d in devices if d.supported]
-        self._show_back = len(supported) > 1
         if not supported:
             self._show_no_devices(devices)
-        elif len(supported) == 1:
+        elif auto and len(supported) == 1:
             self._pick(supported[0].id)
         else:
             self._show_devices(devices)
@@ -322,13 +322,13 @@ class App:
         self.sw_mute = self._switch_row(gcard, "Mute", "mute")
         self.sw_disp = self._switch_row(gcard, "Display", "display", last=True)
 
-        # Footer: (← Devices) + refresh + logout
+        # Footer: ← Devices + refresh + logout
         foot = ctk.CTkFrame(self.root, fg_color="transparent")
         foot.pack(fill="x", padx=18, pady=(14, 0))
-        if self._show_back:
-            ctk.CTkButton(foot, text="←  Devices", height=34, corner_radius=10,
-                          fg_color="transparent", hover_color=CARD, text_color=SUBTLE,
-                          font=("SF Pro Text", 12), command=self._go_devices).pack(side="left")
+        ctk.CTkButton(foot, text="←  Devices", height=34, corner_radius=10,
+                      fg_color="transparent", hover_color=CARD, text_color=SUBTLE,
+                      font=("SF Pro Text", 12),
+                      command=lambda: self._go_devices(auto=False)).pack(side="left")
         ctk.CTkButton(foot, text="↺  Refresh", height=34, corner_radius=10,
                       fg_color="transparent", hover_color=CARD, text_color=SUBTLE,
                       font=("SF Pro Text", 12), command=self._on_refresh).pack(side="left", padx=(8, 0))

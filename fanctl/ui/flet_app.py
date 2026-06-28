@@ -36,7 +36,6 @@ class FletApp:
         self.state = FanState()
         self.screen = "loading"
         self.busy = 0
-        self._show_back = False      # show "← Devices" only when there's a picker
 
         page.title = "fanctl"
         page.bgcolor = BG
@@ -66,8 +65,10 @@ class FletApp:
         else:
             self._show_login()
 
-    async def _go_devices(self):
-        """List devices, then route: 0 supported → message, 1 → auto, many → picker."""
+    async def _go_devices(self, auto: bool = True):
+        """List devices, then route. With auto=True a single device is selected
+        automatically (smooth launch); auto=False always shows the list (used by
+        the "← Devices" button so the list is reachable even with one device)."""
         self._show_loading("Loading devices…")
         try:
             devices = await self.ctrl.list_devices()
@@ -77,10 +78,9 @@ class FletApp:
             self.page.update()
             return
         supported = [d for d in devices if d.supported]
-        self._show_back = len(supported) > 1
         if not supported:
             self._show_no_devices(devices)
-        elif len(supported) == 1:
+        elif auto and len(supported) == 1:
             await self._pick(supported[0].id)
         else:
             self._show_devices(devices)
@@ -282,12 +282,12 @@ class FletApp:
              self.lbl_status],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN, width=344,
         )
-        buttons = []
-        if self._show_back:
-            buttons.append(ft.TextButton("← Devices", on_click=self._on_back_to_devices))
-        buttons.append(ft.TextButton("↺ Refresh", on_click=self._on_refresh))
-        buttons.append(ft.TextButton("Sign Out", on_click=self._do_logout))
-        footer = ft.Row(buttons, alignment=ft.MainAxisAlignment.SPACE_BETWEEN, width=344)
+        footer = ft.Row(
+            [ft.TextButton("← Devices", on_click=self._on_back_to_devices),
+             ft.TextButton("↺ Refresh", on_click=self._on_refresh),
+             ft.TextButton("Sign Out", on_click=self._do_logout)],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN, width=344,
+        )
 
         self._swap(
             ft.Column(
@@ -415,7 +415,7 @@ class FletApp:
         await self._command(self.ctrl.refresh())
 
     async def _on_back_to_devices(self, e):
-        await self._go_devices()
+        await self._go_devices(auto=False)      # always show the list, even with one device
 
     async def _do_logout(self, e):
         self._show_loading("Signing out…")
