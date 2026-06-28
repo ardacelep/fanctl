@@ -1,5 +1,11 @@
 # fanctl
 
+[![CI](https://github.com/ardacelep/fanctl/actions/workflows/ci.yml/badge.svg)](https://github.com/ardacelep/fanctl/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/ardacelep/fanctl)](https://github.com/ardacelep/fanctl/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/ardacelep/fanctl/total)](https://github.com/ardacelep/fanctl/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
+
 Control **Levoit (VeSync) Classic Tower Fans** — model LTF-F422S — from your
 desktop, your browser, or the command line. One Python codebase, a clean
 UI-agnostic backend, secure token login, and a modern UI.
@@ -59,11 +65,30 @@ fanctl --tk                 # alternative tkinter frontend  (needs: pip install 
 
 `python3 -m fanctl ...` is equivalent. Flags combine, e.g. `fanctl --fake --web`.
 
-### Install it (end users)
+### Download it (end users)
 
-End users shouldn't need to install Python. Ship a native bundle built with Flet
-(see [Packaging](#packaging)); the user just downloads and double-clicks. The
-in-app login screen handles credentials — no config files.
+No Python needed — grab a prebuilt bundle from the
+**[latest release](https://github.com/ardacelep/fanctl/releases/latest)**:
+
+| OS | File |
+|----|------|
+| macOS | `fanctl-macos.zip` |
+| Windows | `fanctl-windows.zip` |
+| Linux | `fanctl-linux.zip` |
+
+Unzip and launch. The in-app login screen handles credentials — no config files.
+
+> **First launch — the app is unsigned**, so the OS shows a one-time warning.
+> This is expected for a free, independent project (code signing costs a yearly
+> fee). To open it:
+>
+> - **macOS:** right-click the app → **Open** → **Open** in the dialog. (Double-
+>   clicking shows *"can't be opened because it is from an unidentified developer"* —
+>   right-click → Open is the bypass. You only do this once.) On recent macOS you
+>   may instead need **System Settings → Privacy & Security → Open Anyway**.
+> - **Windows:** SmartScreen shows *"Windows protected your PC"* → click
+>   **More info** → **Run anyway**.
+> - **Linux:** make it executable if needed (`chmod +x`) and run it.
 
 ---
 
