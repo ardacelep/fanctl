@@ -39,18 +39,31 @@ jobs:
 
       # --yes lets flet install the exact Flutter SDK it needs, non-interactively
       # (the runners already provide Xcode / Visual Studio / GTK toolchains).
+      # PYTHONUTF8 avoids a UnicodeEncodeError from flet's output on Windows' cp1252 console.
       - name: Build
+        env:
+          PYTHONUTF8: "1"
+          PYTHONIOENCODING: "utf-8"
         run: flet build ${{ matrix.target }} --no-rich-output --yes
 
+      # Package only the final artifact — zipping all of build/<target> pulls in
+      # multi-GB Flutter intermediates and blows past GitHub's 2 GB asset limit.
       - name: Archive bundle
         shell: bash
         run: |
-          cd build/${{ matrix.target }}
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            7z a "${{ github.workspace }}/${{ matrix.name }}.zip" .
-          else
-            zip -r "${{ github.workspace }}/${{ matrix.name }}.zip" .
-          fi
+          set -e
+          out="$GITHUB_WORKSPACE/${{ matrix.name }}.zip"
+          case "${{ matrix.target }}" in
+            macos)
+              app=$(find build/macos -maxdepth 3 -name '*.app' | head -1)
+              echo "Packaging $app"
+              ditto -c -k --keepParent "$app" "$out" ;;
+            windows)
+              7z a "$out" ./build/windows/* ;;
+            linux)
+              ( cd build/linux && zip -r "$out" . ) ;;
+          esac
+          ls -lh "$out"
 
       - name: Attach to release
         uses: softprops/action-gh-release@v2
