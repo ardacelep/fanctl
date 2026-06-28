@@ -226,6 +226,12 @@ PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). The fake backend lets yo
 develop and test with no hardware. A new frontend is just *subscribe + render +
 call `set_*`*.
 
+## Acknowledgements
+
+- [**pyvesync**](https://github.com/webdjoe/pyvesync) — the community library that
+  does the heavy lifting of talking to the VeSync cloud. fanctl is a UI on top of it.
+- [**Flet**](https://flet.dev) — the Flutter-powered framework behind the primary UI.
+
 ## License
 
 [MIT](LICENSE).
