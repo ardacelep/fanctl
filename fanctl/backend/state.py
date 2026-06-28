@@ -24,3 +24,13 @@ class FanState:
     mute: bool = False
     display: bool = False
     temperature_c: float | None = None
+
+
+@dataclass(frozen=True)
+class DeviceInfo:
+    """A device on the account, shown in the picker. ``supported`` is True for
+    devices fanctl can currently control (today: tower fans)."""
+    id: str                              # stable device id (cid)
+    name: str
+    kind: str = "Fan"                    # human-ish device type, e.g. "Fan", "Purifier"
+    supported: bool = True

@@ -10,7 +10,7 @@ import asyncio
 
 import flet as ft
 
-from ..backend import DEFAULT_REGION, REGIONS, FanController, FanState
+from ..backend import DEFAULT_REGION, REGIONS, DeviceInfo, FanController, FanState
 
 # How often to poll the cloud so changes made elsewhere (VeSync app, the physical
 # fan) show up here. VeSync has no push API, so this is a poll.
@@ -57,10 +57,42 @@ class FletApp:
     async def start(self):
         self._show_loading("Connecting…")
         try:
-            connected = await self.ctrl.restore_and_connect()
+            ok = await self.ctrl.restore()
         except Exception:
-            connected = False
-        self._show_fan() if connected else self._show_login()
+            ok = False
+        if ok:
+            await self._go_devices()
+        else:
+            self._show_login()
+
+    async def _go_devices(self, auto: bool = True):
+        """List devices, then route. With auto=True a single device is selected
+        automatically (smooth launch); auto=False always shows the list (used by
+        the "← Devices" button so the list is reachable even with one device)."""
+        self._show_loading("Loading devices…")
+        try:
+            devices = await self.ctrl.list_devices()
+        except Exception as err:
+            self._show_login()
+            self.lbl_login_msg.value = self._friendly_error(err)
+            self.page.update()
+            return
+        supported = [d for d in devices if d.supported]
+        if not supported:
+            self._show_no_devices(devices)
+        elif auto and len(supported) == 1:
+            await self._pick(supported[0].id)
+        else:
+            self._show_devices(devices)
+
+    async def _pick(self, device_id: str):
+        self._show_loading("Connecting…")
+        try:
+            await self.ctrl.select(device_id)
+        except Exception:
+            await self._go_devices()
+            return
+        self._show_fan()
 
     def _swap(self, *controls):
         self.page.clean()
@@ -132,8 +164,8 @@ class FletApp:
         self.lbl_login_msg.value = ""
         self.page.update()
         try:
-            await self.ctrl.login_and_connect(email, pwd, region)
-            self._show_fan()
+            await self.ctrl.login(email, pwd, region)
+            await self._go_devices()
         except Exception as err:
             self.btn_login.content = "Sign In"
             self.btn_login.disabled = False
@@ -148,6 +180,63 @@ class FletApp:
         if "Server" in name or "Response" in name:
             return "Couldn't reach the server. Check your internet connection."
         return str(err) or name
+
+    # ── Device picker ──────────────────────────────────────────────────────────
+
+    def _show_devices(self, devices: list[DeviceInfo]):
+        self.screen = "devices"
+        rows = []
+        for dev in devices:
+            if dev.supported:
+                rows.append(ft.Container(
+                    content=ft.Row(
+                        [ft.Column([ft.Text(dev.name, size=15, weight=ft.FontWeight.BOLD, color=TEXT),
+                                    ft.Text(dev.kind, size=12, color=SUBTLE)], spacing=2),
+                         ft.Icon(ft.Icons.CHEVRON_RIGHT, color=SUBTLE)],
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    bgcolor=CARD, border_radius=14, padding=16, width=320,
+                    ink=True, on_click=self._on_device_click, data=dev.id,
+                ))
+            else:
+                rows.append(ft.Container(
+                    content=ft.Row(
+                        [ft.Column([ft.Text(dev.name, size=15, color=SUBTLE),
+                                    ft.Text(f"{dev.kind} · not supported yet", size=12, color=SUBTLE)],
+                                   spacing=2)]),
+                    bgcolor=CARD, border_radius=14, padding=16, width=320, opacity=0.5,
+                ))
+        self._swap(
+            ft.Column(
+                [ft.Text("Choose a device", size=22, weight=ft.FontWeight.BOLD, color=TEXT),
+                 ft.Container(height=8), *rows, ft.Container(height=8),
+                 ft.TextButton("Sign Out", on_click=self._do_logout)],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=10, scroll=ft.ScrollMode.AUTO, expand=True,
+            )
+        )
+
+    async def _on_device_click(self, e):
+        await self._pick(e.control.data)
+
+    def _show_no_devices(self, devices: list[DeviceInfo]):
+        self.screen = "devices"
+        extra = ""
+        if devices:
+            extra = "Found: " + ", ".join(f"{d.name} ({d.kind})" for d in devices)
+        self._swap(
+            ft.Column(
+                [ft.Text("No supported devices", size=20, weight=ft.FontWeight.BOLD, color=TEXT),
+                 ft.Text("This account has no tower fan that fanctl can control yet.",
+                         size=13, color=SUBTLE, width=320, text_align=ft.TextAlign.CENTER),
+                 ft.Text(extra, size=12, color=SUBTLE, width=320, text_align=ft.TextAlign.CENTER),
+                 ft.Container(height=8),
+                 ft.TextButton("Sign Out", on_click=self._do_logout)],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=10, expand=True,
+            )
+        )
 
     # ── Fan ──────────────────────────────────────────────────────────────────
 
@@ -194,7 +283,8 @@ class FletApp:
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN, width=344,
         )
         footer = ft.Row(
-            [ft.TextButton("↺ Refresh", on_click=self._on_refresh),
+            [ft.TextButton("← Devices", on_click=self._on_back_to_devices),
+             ft.TextButton("↺ Refresh", on_click=self._on_refresh),
              ft.TextButton("Sign Out", on_click=self._do_logout)],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN, width=344,
         )
@@ -323,6 +413,9 @@ class FletApp:
 
     async def _on_refresh(self, e):
         await self._command(self.ctrl.refresh())
+
+    async def _on_back_to_devices(self, e):
+        await self._go_devices(auto=False)      # always show the list, even with one device
 
     async def _do_logout(self, e):
         self._show_loading("Signing out…")

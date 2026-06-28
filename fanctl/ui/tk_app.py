@@ -82,12 +82,42 @@ class App:
 
     def _start(self):
         self._show_loading("Connecting…")
-        fut = self._submit(self._ctrl.restore_and_connect())
-        fut.add_done_callback(
-            lambda f: self._ui(lambda: self._route(f.result() if not f.exception() else False)))
+        fut = self._submit(self._ctrl.restore())
+        fut.add_done_callback(lambda f: self._ui(lambda: self._after_restore(f)))
 
-    def _route(self, connected: bool):
-        self._show_fan() if connected else self._show_login()
+    def _after_restore(self, f):
+        if f.exception() or not f.result():
+            self._show_login()
+        else:
+            self._go_devices()
+
+    # ── Device routing ──────────────────────────────────────────────────────
+
+    def _go_devices(self, auto: bool = True):
+        """auto=True selects a lone device automatically (launch); auto=False always
+        shows the list (the "← Devices" button), reachable even with one device."""
+        self._show_loading("Loading devices…")
+        fut = self._submit(self._ctrl.list_devices())
+        fut.add_done_callback(lambda f: self._ui(lambda: self._devices_loaded(f, auto)))
+
+    def _devices_loaded(self, f, auto: bool):
+        if f.exception():
+            self._show_login()
+            return
+        devices = f.result()
+        supported = [d for d in devices if d.supported]
+        if not supported:
+            self._show_no_devices(devices)
+        elif auto and len(supported) == 1:
+            self._pick(supported[0].id)
+        else:
+            self._show_devices(devices)
+
+    def _pick(self, device_id: str):
+        self._show_loading("Connecting…")
+        fut = self._submit(self._ctrl.select(device_id))
+        fut.add_done_callback(
+            lambda f: self._ui(lambda: (self._show_fan() if not f.exception() else self._go_devices())))
 
     # ── Loading splash ────────────────────────────────────────────────────
 
@@ -159,12 +189,12 @@ class App:
         self._login_form_enabled(False)
         self.btn_login.configure(text="Signing in…")
         self.lbl_login_msg.configure(text="")
-        fut = self._submit(self._ctrl.login_and_connect(email, pwd, region))
+        fut = self._submit(self._ctrl.login(email, pwd, region))
         fut.add_done_callback(lambda f: self._ui(lambda: self._login_done(f.exception())))
 
     def _login_done(self, err: BaseException | None):
         if err is None:
-            self._show_fan()
+            self._go_devices()
             return
         self._login_form_enabled(True)
         self.btn_login.configure(text="Sign In")
@@ -183,6 +213,44 @@ class App:
         if "Server" in name or "Response" in name:
             return "Couldn't reach the server. Check your internet connection."
         return str(err) or name
+
+    # ── Device picker ───────────────────────────────────────────────────────
+
+    def _show_devices(self, devices):
+        self._screen = "devices"
+        self._clear_root()
+        wrap = ctk.CTkFrame(self.root, fg_color="transparent", width=320)
+        wrap.place(relx=0.5, rely=0.5, anchor="center")
+        ctk.CTkLabel(wrap, text="Choose a device", text_color=TEXT,
+                     font=("SF Pro Display", 22, "bold")).pack(pady=(0, 14))
+        for dev in devices:
+            if dev.supported:
+                b = ctk.CTkButton(wrap, text=f"{dev.name}\n{dev.kind}", width=300, height=56,
+                                  corner_radius=12, fg_color=CARD, hover_color=CARD2,
+                                  text_color=TEXT, anchor="w", font=("SF Pro Text", 13),
+                                  command=lambda i=dev.id: self._pick(i))
+                b.pack(pady=5)
+            else:
+                lbl = ctk.CTkLabel(wrap, text=f"{dev.name}\n{dev.kind} · not supported yet",
+                                   width=300, height=56, corner_radius=12, fg_color=CARD,
+                                   text_color=SUBTLE, font=("SF Pro Text", 13))
+                lbl.pack(pady=5)
+        ctk.CTkButton(wrap, text="Sign Out", width=300, height=34, corner_radius=10,
+                      fg_color="transparent", hover_color=CARD, text_color=SUBTLE,
+                      font=("SF Pro Text", 12), command=self._do_logout).pack(pady=(14, 0))
+
+    def _show_no_devices(self, devices):
+        self._screen = "devices"
+        self._clear_root()
+        wrap = ctk.CTkFrame(self.root, fg_color="transparent", width=320)
+        wrap.place(relx=0.5, rely=0.5, anchor="center")
+        ctk.CTkLabel(wrap, text="No supported devices", text_color=TEXT,
+                     font=("SF Pro Display", 20, "bold")).pack(pady=(0, 8))
+        ctk.CTkLabel(wrap, text="This account has no tower fan that fanctl can control yet.",
+                     text_color=SUBTLE, font=("SF Pro Text", 13), wraplength=300).pack()
+        ctk.CTkButton(wrap, text="Sign Out", width=300, height=34, corner_radius=10,
+                      fg_color="transparent", hover_color=CARD, text_color=SUBTLE,
+                      font=("SF Pro Text", 12), command=self._do_logout).pack(pady=(14, 0))
 
     # ── Fan screen ────────────────────────────────────────────────────────
 
@@ -254,12 +322,16 @@ class App:
         self.sw_mute = self._switch_row(gcard, "Mute", "mute")
         self.sw_disp = self._switch_row(gcard, "Display", "display", last=True)
 
-        # Footer: refresh + logout
+        # Footer: ← Devices + refresh + logout
         foot = ctk.CTkFrame(self.root, fg_color="transparent")
         foot.pack(fill="x", padx=18, pady=(14, 0))
+        ctk.CTkButton(foot, text="←  Devices", height=34, corner_radius=10,
+                      fg_color="transparent", hover_color=CARD, text_color=SUBTLE,
+                      font=("SF Pro Text", 12),
+                      command=lambda: self._go_devices(auto=False)).pack(side="left")
         ctk.CTkButton(foot, text="↺  Refresh", height=34, corner_radius=10,
                       fg_color="transparent", hover_color=CARD, text_color=SUBTLE,
-                      font=("SF Pro Text", 12), command=self._on_refresh).pack(side="left")
+                      font=("SF Pro Text", 12), command=self._on_refresh).pack(side="left", padx=(8, 0))
         ctk.CTkButton(foot, text="Sign Out", height=34, corner_radius=10,
                       fg_color="transparent", hover_color=CARD, text_color=SUBTLE,
                       font=("SF Pro Text", 12), command=self._do_logout).pack(side="right")
