@@ -6,31 +6,48 @@ real device (including the reconcile delay), simulates mode side-effects on spee
 (turbo→12, sleep→1, auto→4), and adds a little latency so the syncing indicator
 is visible.
 
-Fake auth lets the full login flow be exercised: ``_restore`` returns False (the
-login screen shows), any non-empty credentials succeed, and the password
-``"wrong"`` fails.
+It simulates a multi-device account: two controllable fans plus one unsupported
+device, so the device-picker flow can be built and tested without hardware. Fake
+auth lets the full login flow be exercised: any non-empty credentials succeed,
+the password ``"wrong"`` fails, and ``_restore`` returns False (login shows).
 """
 
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
 
 from .controller import FanController
-from .state import FanState
+from .state import DeviceInfo, FanState
 
 LATENCY = 0.25
+
+
+@dataclass
+class _FakeFan:
+    id: str
+    name: str
+    on: bool = True
+    speed: int = 6
+    mode: str = "normal"
+    osc: bool = True
+    mute: bool = False
+    disp: bool = True
+    temp_c: float = 27.5
 
 
 class FakeFanController(FanController):
     def __init__(self):
         super().__init__()
-        self._on = True
-        self._speed = 6
-        self._mode = "normal"
-        self._osc = True
-        self._mute = False
-        self._disp = True
-        self._temp_c = 27.5
+        self._fans: dict[str, _FakeFan] = {
+            "fan-living": _FakeFan("fan-living", "Living Room Fan", speed=6, mode="normal"),
+            "fan-bedroom": _FakeFan("fan-bedroom", "Bedroom Fan", on=False, speed=3,
+                                    mode="sleep", osc=False, temp_c=24.0),
+        }
+        # One unsupported device, to exercise the picker's "not supported" state.
+        self._unsupported = [DeviceInfo(id="purifier-1", name="Air Purifier",
+                                        kind="Purifier", supported=False)]
+        self._active: _FakeFan | None = None
 
     # ── Auth (faked) ──────────────────────────────────────────────────────
 
@@ -45,15 +62,32 @@ class FakeFanController(FanController):
         return False
 
     async def _logout(self) -> None:
-        pass
+        self._active = None
+
+    # ── Devices (faked) ───────────────────────────────────────────────────
+
+    async def _list_devices(self) -> list[DeviceInfo]:
+        await asyncio.sleep(LATENCY)
+        fans = [DeviceInfo(id=f.id, name=f.name, kind="Fan", supported=True)
+                for f in self._fans.values()]
+        out = fans + self._unsupported
+        out.sort(key=lambda d: (not d.supported, d.name.lower()))
+        return out
+
+    async def _select(self, device_id: str) -> None:
+        await asyncio.sleep(LATENCY)
+        if device_id not in self._fans:
+            raise RuntimeError("Device not found or not supported")
+        self._active = self._fans[device_id]
 
     # ── Device (faked) ────────────────────────────────────────────────────
 
     def _snapshot(self) -> FanState:
+        d = self._active
         return FanState(
-            on=self._on, speed=self._speed, mode=self._mode,
-            oscillation=self._osc, mute=self._mute, display=self._disp,
-            temperature_c=self._temp_c,
+            on=d.on, speed=d.speed, mode=d.mode,
+            oscillation=d.osc, mute=d.mute, display=d.disp,
+            temperature_c=d.temp_c,
         )
 
     async def _pull(self) -> FanState:
@@ -62,18 +96,18 @@ class FakeFanController(FanController):
 
     async def _apply_power(self, on: bool) -> None:
         await asyncio.sleep(LATENCY)
-        self._on = on
+        self._active.on = on
 
     async def _apply_speed(self, n: int) -> None:
         await asyncio.sleep(LATENCY)
-        self._speed = n
-        self._mode = "normal"
+        self._active.speed = n
+        self._active.mode = "normal"
 
     async def _apply_mode(self, mode: str) -> None:
         await asyncio.sleep(LATENCY)
-        self._mode = mode
-        self._speed = {"turbo": 12, "sleep": 1, "auto": 4}.get(mode, self._speed)
+        self._active.mode = mode
+        self._active.speed = {"turbo": 12, "sleep": 1, "auto": 4}.get(mode, self._active.speed)
 
     async def _apply_toggle(self, kind: str, on: bool) -> None:
         await asyncio.sleep(LATENCY)
-        setattr(self, {"oscillation": "_osc", "mute": "_mute", "display": "_disp"}[kind], on)
+        setattr(self._active, {"oscillation": "osc", "mute": "mute", "display": "disp"}[kind], on)

@@ -9,11 +9,11 @@ Public surface:
 
 from .controller import FanController, StateListener
 from .fake import FakeFanController
-from .state import DEFAULT_REGION, MODES, REGIONS, FanState
+from .state import DEFAULT_REGION, MODES, REGIONS, DeviceInfo, FanState
 from .vesync import VeSyncFanController
 
 __all__ = [
-    "FanController", "StateListener", "FanState",
+    "FanController", "StateListener", "FanState", "DeviceInfo",
     "VeSyncFanController", "FakeFanController",
     "MODES", "REGIONS", "DEFAULT_REGION",
 ]

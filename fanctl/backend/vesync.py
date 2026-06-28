@@ -14,7 +14,7 @@ from pyvesync.const import DeviceStatus
 
 from .controller import FanController
 from .paths import auth_file
-from .state import DEFAULT_REGION, FanState
+from .state import DEFAULT_REGION, DeviceInfo, FanState
 
 
 class VeSyncFanController(FanController):
@@ -52,14 +52,39 @@ class VeSyncFanController(FanController):
         self._fan = None
         self._auth_file.unlink(missing_ok=True)
 
+    # ── Devices ───────────────────────────────────────────────────────────
+
+    async def _list_devices(self) -> list[DeviceInfo]:
+        await self._manager.update()
+        supported = {f.cid for f in self._manager.devices.fans}
+        devices = [
+            DeviceInfo(
+                id=dev.cid,
+                name=dev.device_name or dev.device_type,
+                kind=(getattr(dev, "product_type", "") or "Fan") if dev.cid in supported
+                     else (getattr(dev, "product_type", "") or dev.device_type or "Device"),
+                supported=dev.cid in supported,
+            )
+            for dev in self._manager.devices
+        ]
+        devices.sort(key=lambda d: (not d.supported, d.name.lower()))
+        return devices
+
+    async def _select(self, device_id: str) -> None:
+        if self._manager.devices.fans is None or not self._manager.devices.fans:
+            await self._manager.update()
+        for fan in self._manager.devices.fans:
+            if fan.cid == device_id:
+                self._fan = fan
+                return
+        raise RuntimeError("Device not found or not supported")
+
     # ── Device ────────────────────────────────────────────────────────────
 
     async def _pull(self) -> FanState:
         await self._manager.update()
-        fans = self._manager.devices.fans
-        if not fans:
-            raise RuntimeError("No fan found on this account")
-        self._fan = fans[0]
+        if self._fan is None:
+            raise RuntimeError("No device selected")
         return self._snapshot()
 
     def _snapshot(self) -> FanState:

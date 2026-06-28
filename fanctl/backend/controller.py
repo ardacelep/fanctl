@@ -19,7 +19,7 @@ import asyncio
 from abc import ABC, abstractmethod
 from typing import Awaitable, Callable
 
-from .state import FanState
+from .state import DeviceInfo, FanState
 
 StateListener = Callable[[FanState], None]
 
@@ -43,31 +43,35 @@ class FanController(ABC):
         """Register a listener; called with a FanState whenever state changes."""
         self._listeners.append(callback)
 
-    async def restore_and_connect(self) -> bool:
-        """Try a saved session. True = logged in & connected; False = show login."""
-        if not await self._restore():
-            return False
-        try:
-            await self.connect()
-            return True
-        except Exception:
-            await self._logout()             # token expired / invalid
-            return False
-
-    async def login_and_connect(self, email: str, password: str, country_code: str) -> None:
-        """Authenticate with a password, persist the token, and connect.
+    async def login(self, email: str, password: str, country_code: str) -> None:
+        """Authenticate with a password and persist the token (no device yet).
 
         Raises on bad credentials / network errors so the UI can show them.
         """
         await self._authenticate(email, password, country_code)
-        await self.connect()
+
+    async def restore(self) -> bool:
+        """Restore a saved session. True if authenticated (no device selected yet)."""
+        return await self._restore()
+
+    async def list_devices(self) -> list[DeviceInfo]:
+        """List devices on the account (call after login/restore)."""
+        async with self._lock:
+            return await self._list_devices()
+
+    async def select(self, device_id: str) -> None:
+        """Pick the device to control, then connect to it."""
+        async with self._lock:
+            await self._select(device_id)
+            self._state = await self._pull()
+        self._emit()
 
     async def logout(self) -> None:
         await self._logout()
         self._state = FanState()
 
     async def connect(self) -> None:
-        """Connect to the device (assumes already authenticated)."""
+        """Pull the selected device's state and emit (assumes a device is selected)."""
         async with self._lock:
             self._state = await self._pull()
         self._emit()
@@ -142,6 +146,14 @@ class FanController(ABC):
 
     @abstractmethod
     async def _logout(self) -> None: ...
+
+    @abstractmethod
+    async def _list_devices(self) -> list[DeviceInfo]:
+        """Enumerate devices on the account."""
+
+    @abstractmethod
+    async def _select(self, device_id: str) -> None:
+        """Make the device with this id the active one for subsequent calls."""
 
     @abstractmethod
     def _snapshot(self) -> FanState:
