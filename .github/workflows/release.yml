@@ -1,0 +1,61 @@
+name: Release
+
+# Build native bundles with `flet build` on each OS and attach them to a GitHub
+# Release. Trigger by pushing a version tag, e.g.:  git tag v0.1.0 && git push --tags
+#
+# NOTE: flet build requires the Flutter SDK (installed here on the runners) and
+# can't be tested without it locally — expect to tweak this on its first run.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest,   target: macos,   name: fanctl-macos }
+          - { os: windows-latest, target: windows, name: fanctl-windows }
+          - { os: ubuntu-latest,  target: linux,   name: fanctl-linux }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Linux build deps
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build libgtk-3-dev
+
+      - name: Install flet
+        run: pip install flet
+
+      - name: Build
+        run: flet build ${{ matrix.target }} --no-rich-output
+
+      - name: Archive bundle
+        shell: bash
+        run: |
+          cd build/${{ matrix.target }}
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            7z a "${{ github.workspace }}/${{ matrix.name }}.zip" .
+          else
+            zip -r "${{ github.workspace }}/${{ matrix.name }}.zip" .
+          fi
+
+      - name: Attach to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.name }}.zip
+          generate_release_notes: true

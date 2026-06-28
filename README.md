@@ -7,6 +7,10 @@ UI-agnostic backend, secure token login, and a modern UI.
 > Unofficial, independent project. "Levoit" and "VeSync" are trademarks of their
 > respective owners; used here only to describe compatibility.
 
+<p align="center">
+  <img src="assets/screenshot.png" alt="fanctl fan screen" width="360">
+</p>
+
 ---
 
 ## Compatibility

@@ -121,7 +121,7 @@ class FletApp:
             self.lbl_login_msg.value = "Email and password required."
             self.page.update()
             return
-        self.btn_login.text = "Signing in…"
+        self.btn_login.content = "Signing in…"
         self.btn_login.disabled = True
         self.lbl_login_msg.value = ""
         self.page.update()
@@ -129,7 +129,7 @@ class FletApp:
             await self.ctrl.login_and_connect(email, pwd, region)
             self._show_fan()
         except Exception as err:
-            self.btn_login.text = "Sign In"
+            self.btn_login.content = "Sign In"
             self.btn_login.disabled = False
             self.lbl_login_msg.value = self._friendly_error(err)
             self.page.update()
@@ -237,7 +237,7 @@ class FletApp:
         self.state = st
         if self.screen != "fan":
             return
-        self.btn_power.text = "ON" if st.on else "OFF"
+        self.btn_power.content = "ON" if st.on else "OFF"
         self.btn_power.style = ft.ButtonStyle(
             bgcolor=GREEN if st.on else CARD2, color="#10241b" if st.on else TEXT)
         if st.speed:
