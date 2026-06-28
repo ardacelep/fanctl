@@ -205,8 +205,8 @@ CustomTkinter's assets (PyInstaller hooks / `--add-data`).
 | Symptom | Fix |
 |---|---|
 | `ModuleNotFoundError: _tkinter` | Rebuild Python with Tk (see above), or just use the default Flet frontend. |
-| "E-posta veya şifre hatalı" | Use the same credentials as the VeSync mobile app. |
-| "Sunucuya ulaşılamadı" | Check your internet connection. |
+| "Wrong email or password" | Use the same credentials as the VeSync mobile app. |
+| "Couldn't reach the server" | Check your internet connection. |
 | Logged in but no fan | The account must have an LTF-F422S-series fan registered. |
 | Switch to another account | **Logout**, then sign in again. |
 
